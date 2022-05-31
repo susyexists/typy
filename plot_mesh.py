@@ -5,10 +5,12 @@ file_path = f"./input/"
 nscf = "nscf.out"
 wout = "NbSe2.wout"
 hr = "NbSe2_hr.dat"
+# Define metallic band
+metallic_band_index = 6
 # Create NxN mesh
-mesh = mesh_2d(100)
+N = 100
 # Create model
 model = typy(file_path, nscf, wout, hr)
-# Calculate dispersion
-band = model.parallel_solver(mesh)
-model.plot_electron_mesh(mesh, band=band_2d[6])
+# Plot metallic band
+plot_electron_mesh(model, N, metallic_band_index,
+                   save="./output/band_mesh.png")

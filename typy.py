@@ -87,24 +87,10 @@ class typy:
         if save != None:
             plt.savefig(save)
 
-    def t_mesh(self, mesh):
+    def t_mesh(self, N):
+        mesh = mesh_2d(N)
         t_mesh = np.dot(self.g_vec.T, mesh.T)
         return t_mesh
-
-    def plot_electron_mesh(self, mesh, band, temp=None, save=None):
-        t_mesh = self.t_mesh(mesh)
-        plt.figure(figsize=(5, 7))
-        plt.scatter(t_mesh[0], t_mesh[1], c=band, cmap='jet')
-        plt.colorbar()
-        plt.xlim(min(t_mesh[0]), max(t_mesh[0]))
-        plt.ylim(min(t_mesh[1]), max(t_mesh[1]))
-        plt.axis("equal")
-        plt.axis("off")
-        if temp == None:
-            plt.title("")
-        else:
-            plt.title(f"σ = {temp}")
-        return plt.show()
 
 
 def GMKG(num_points, g_length=1):
@@ -152,7 +138,7 @@ def plot_fs(t_mesh, band, fs_thickness=0.01, title=None):
     plt.show()
 
 
-def mesh_2d(N, factor=1):
+def mesh_2d(N, factor=2):
     one_dim = np.linspace(-1, 1, N)
     two_dim = np.array([[i, j] for i in one_dim for j in one_dim])
     return (two_dim*factor)
@@ -197,3 +183,23 @@ def read_efermi(path):
         if "the Fermi energy is" in i:
             e_fermi = float(i.split()[-2])
             return e_fermi
+
+
+def plot_electron_mesh(model, N, metallic_band_index, save=None, temp=None):
+    mesh = mesh_2d(N, factor=1.2)
+    band = model.parallel_solver(mesh)[metallic_band_index]
+    t_mesh = model.t_mesh(N)
+    plt.figure(figsize=(6, 5))
+    plt.scatter(t_mesh[0], t_mesh[1], c=band, cmap='jet')
+    plt.colorbar()
+    plt.xlim(-2.9, 2.9)
+    plt.ylim(-2.6, 2.6)
+    # plt.axis("equal")
+    plt.xticks([])
+    plt.yticks([])
+    if temp == None:
+        plt.title("")
+    else:
+        plt.title(f"σ = {temp}")
+    if save != None:
+        plt.savefig(save)
