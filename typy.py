@@ -1,4 +1,5 @@
 # Numerical tools
+from scipy.constants import physical_constants
 import numpy as np
 # Plotting
 import matplotlib.pyplot as plt
@@ -12,57 +13,47 @@ num_cores = multiprocessing.cpu_count()
 kb = physical_constants['Boltzmann constant in eV/K'][0]
 
 
-class TB:
-
+class typy:
     def __init__(self, path, nscf, wout, hr, shift=0):
-        self.temp = T
         self.shift = shift
         self.path = path
-        self.fermi_energy = self.read_efermi(path+nscf)+self.shift
+        self.fermi_energy = read_efermi(path+nscf)+self.shift
         self.g_vec = read_gvec(path+wout)
         self.g_length = 1
-        self.data = self.read_hr(path+hr)
+        self.data = read_hr(path+hr)
         self.hopping = self.data[0]
-        self.nbnd = int(sqrt(len(self.data[0])/len(self.data[2])))
+        self.nbnd = int(np.sqrt(len(self.data[0])/len(self.data[2])))
         self.points = len(self.data[2])
         self.sym = self.data[2]
         self.h = self.hopping.reshape(self.points, self.nbnd*self.nbnd)
-        self.x = data[1].reshape(2, self.points, self.nbnd*self.nbnd)
-
-    def phselfen(self, λ, λ_real, γ, γ_real, ω):
-        λ = loadtxt(self.path+"lambda.dat").reshape(-1, 9).T
-        λ_real = loadtxt(self.path+"lambda_re.dat").reshape(-1, 9).T
-        γ = loadtxt(self.path+"gamma.dat").reshape(-1, 9).T
-        γ_real = loadtxt(self.path+"gamma_re.dat").reshape(-1, 9).T
-        ω = loadtxt(self.path+"omega.dat").reshape(-1, 9).T
-        return λ, λ_real, γ, γ_real, ω
+        self.x = self.data[1].reshape(2, self.points, self.nbnd*self.nbnd)
 
     def fourier(self, k):
-        kx = tensordot(k, self.x, axes=(0, 0))
-        transform = dot(self.sym, exp(-1j*self.super_cell*kx)
-                        * self.h).reshape(self.nbnd, self.nbnd)
+        kx = np.tensordot(k, self.x, axes=(0, 0))
+        transform = np.dot(self.sym, np.exp(-1j*self.super_cell*kx)
+                           * self.h).reshape(self.nbnd, self.nbnd)
         return(transform)
 
     def eig(self, k):
         val = []
         vec = []
         for i in range(len(k)):
-            sol = linalg.eigh(self.fourier(k[i]))
+            sol = np.linalg.eigh(self.fourier(k[i]))
             val.append(sol[0])
             vec.append(sol[1])
         return (val, vec)
 
     def solver(self, k):
-        kx = tensordot(k, self.x, axes=(0, 0))
-        transform = dot(self.sym, exp(-1j*self.super_cell*kx*2*pi)
-                        * self.h).reshape(self.nbnd, self.nbnd)
-        val, vec = linalg.eigh(transform)
+        kx = np.tensordot(k, self.x, axes=(0, 0))
+        transform = np.dot(self.sym, np.exp(-1j*kx*2*np.pi)
+                           * self.h).reshape(self.nbnd, self.nbnd)
+        val, vec = np.linalg.eigh(transform)
         return(val)
 
     def parallel_solver(self, path):
         results = Parallel(n_jobs=num_cores)(
             delayed(self.solver)(i) for i in path)
-        res = array(results).T-self.fermi_energy
+        res = np.array(results).T-self.fermi_energy
         return (res)
 
     def suscep(self, point, mesh, mesh_energy, mesh_fermi, delta=0.0000001):
@@ -70,32 +61,10 @@ class TB:
         shifted_fermi = self.fermi(shifted_energy)
         num = mesh_fermi-shifted_fermi
         den = mesh_energy-shifted_energy+1j*delta
-        res = -average(num/den)
+        res = -np.average(num/den)
         return(res)
 
-    def suscep_epw(self, point, mesh, mesh_energy, mesh_fermi, epw1, epw2=[]):
-        if epw2 == []:
-            epw2 = copy(epw1)
-        shifted_energy = self.parallel_solver(point+mesh)[6]
-        shifted_fermi = self.fermi(shifted_energy)
-        num = mesh_fermi-shifted_fermi
-        den = mesh_energy-shifted_energy
-        mult = -epw1*conj(epw2)*num/den*10**-3
-        res = average(mult)
-        return(res)
-
-    def hexagon():
-        a = array([[[-1/sqrt(3), 1/sqrt(3)], [1, 1]],
-                   [[1/sqrt(3), 2/sqrt(3)], [1, 0]],
-                   [[2/sqrt(3), 1/sqrt(3)], [0, -1]],
-                   [[1/sqrt(3), -1/sqrt(3)], [-1, -1]],
-                   [[-1/sqrt(3), -2/sqrt(3)], [-1, 0]],
-                   [[-2/sqrt(3), -1/sqrt(3)], [0, 1]],
-                   ])
-        return (a)
-
-    def plot_electron_path(self, band, sym, label, temp=None, ylim=None, save=None):
-
+    def plot_electron_path(self, band, sym, label, ylim=None, save=None, temp=None):
         # Plot band
         plt.figure(figsize=(7, 6))
         for i in band:
@@ -115,10 +84,11 @@ class TB:
             plt.title(
                 r"$\delta \epsilon_{Fermi} = $"f" {self.shift} eV", fontsize=15)
         plt.ylabel("Energy (eV)", fontsize=15)
-        return plt.show()
+        if save != None:
+            plt.savefig(save)
 
     def t_mesh(self, mesh):
-        t_mesh = dot(self.g_vec.T, mesh.T)
+        t_mesh = np.dot(self.g_vec.T, mesh.T)
         return t_mesh
 
     def plot_electron_mesh(self, mesh, band, temp=None, save=None):
@@ -139,15 +109,18 @@ class TB:
 
 def GMKG(num_points, g_length=1):
     mult = 0.75*num_points/1.00786
-    GM = int(norm(array([[0, 0.5]])-array([[0.0001, 0.0001]]))*mult)
-    MK = int(norm(array([[0.33333, 0.333333]])-array([[0, 0.5]]))*mult)
-    KG = int(norm(array([[0.0001, 0.0001]])-array([[0.33333, 0.333333]]))*mult)
-    path1 = array([zeros(GM), linspace(0.0001, g_length/2, GM)]).T
-    path2 = array([linspace(0, g_length/3, MK), -1/2.1 *
-                  linspace(0, g_length/3, MK)+g_length/2]).T
-    path3 = array([linspace(g_length/3, 0.0001, KG),
-                  linspace(g_length/3, 0.0001, KG)]).T
-    path = concatenate([path1, path2, path3])
+    GM = int(np.linalg.norm(
+        np.array([[0, 0.5]])-np.array([[0.0001, 0.0001]]))*mult)
+    MK = int(
+        np.linalg.norm(np.array([[0.33333, 0.333333]])-np.array([[0, 0.5]]))*mult)
+    KG = int(np.linalg.norm(np.array([[0.0001, 0.0001]]) -
+             np.array([[0.33333, 0.333333]]))*mult)
+    path1 = np.array([np.zeros(GM), np.linspace(0.0001, g_length/2, GM)]).T
+    path2 = np.array([np.linspace(0, g_length/3, MK), -1/2.1 *
+                      np.linspace(0, g_length/3, MK)+g_length/2]).T
+    path3 = np.array([np.linspace(g_length/3, 0.0001, KG),
+                      np.linspace(g_length/3, 0.0001, KG)]).T
+    path = np.concatenate([path1, path2, path3])
     # print("Length of the path is ", len(path))
     sym = [0, GM, GM+MK, GM+MK+KG]
     label = ['Γ', 'M', 'K', 'Γ']
@@ -156,9 +129,9 @@ def GMKG(num_points, g_length=1):
 
 def Symmetries(fstring):
     f = open(fstring, 'r')
-    x = zeros(0)
+    x = np.zeros(0)
     for i in f:
-        x = append(x, float(i.split()[-1]))
+        x = np.append(x, float(i.split()[-1]))
     f.close()
     return x
 
@@ -174,27 +147,24 @@ def plot_fs(t_mesh, band, fs_thickness=0.01, title=None):
     plt.scatter(fs.x, fs.y)
     plt.ylim(-2, 2)
     plt.xlim(-2, 2)
-    # plt.xticks([])
-    # plt.yticks([])
     if title != None:
         plt.title(title, fontsize=15)
     plt.show()
 
 
-def mesh_2d(N):
-    # mesh = model.mesh_2d(100)*norm(model.g_vec[0])*pi/2
-    one_dim = linspace(-1, 1, N)
-    two_dim = array([[i, j] for i in one_dim for j in one_dim])
-    return (two_dim)
+def mesh_2d(N, factor=1):
+    one_dim = np.linspace(-1, 1, N)
+    two_dim = np.array([[i, j] for i in one_dim for j in one_dim])
+    return (two_dim*factor)
 
 
 def fermi(E, T=1):
-    return 1/(1+exp(E/(kb*T)))
+    return 1/(1+np.exp(E/(kb*T)))
 
 
 def read_gvec(path):
     lines = open(path, 'r').readlines()
-    g_vec = zeros(shape=(3, 3))
+    g_vec = np.zeros(shape=(3, 3))
     count = 0
     for i in lines:
         if "b_" in i:
@@ -207,21 +177,20 @@ def read_gvec(path):
     return (g_vec)
 
 
-def read_hr(self, path):
+def read_hr(path):
     lines = open(path, 'r').readlines()
-    sym_line = int(ceil(float(lines[2].split()[0])/15))+3
-    sym = array([int(lines[i].split()[j]) for i in range(3, sym_line)
-                for j in range(len(lines[i].split()))])
-    hr_temp = array([float(lines[i].split()[j]) for i in range(
+    sym_line = int(np.ceil(float(lines[2].split()[0])/15))+3
+    sym = np.array([int(lines[i].split()[j]) for i in range(3, sym_line)
+                    for j in range(len(lines[i].split()))])
+    hr_temp = np.array([float(lines[i].split()[j]) for i in range(
         sym_line, len(lines)) for j in range(len(lines[i].split()))])
     hr = hr_temp.reshape(-1, 7).T
-    wannier = hr
-    x = wannier[0:2]
-    hopping = wannier[5]+1j*wannier[6]
+    x = hr[0:2]
+    hopping = hr[5]+1j*hr[6]
     return (hopping, x, sym)
 
 
-def read_efermi(self, path):
+def read_efermi(path):
     lines = open(path, 'r').readlines()
     e_fermi = 0
     for i in lines:
