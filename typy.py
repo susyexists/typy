@@ -14,11 +14,11 @@ kb = physical_constants['Boltzmann constant in eV/K'][0]
 
 
 class typy:
-    def __init__(self, path, nscf, wout, hr, shift=0):
+    def __init__(self, path, nscf, hr, shift=0):
         self.shift = shift
         self.path = path
         self.fermi_energy = read_efermi(path+nscf)+self.shift
-        self.g_vec = read_gvec(path+wout)
+        self.g_vec = read_gvec(path+nscf)
         self.g_length = 1
         self.data = read_hr(path+hr)
         self.hopping = self.data[0]
@@ -50,7 +50,8 @@ class typy:
         val, vec = np.linalg.eigh(transform)
         return(val)
 
-    def parallel_solver(self, path):
+    def parallel_solver(self, path, shift=0):
+        path = path+shift
         results = Parallel(n_jobs=num_cores)(
             delayed(self.solver)(i) for i in path)
         res = np.array(results).T-self.fermi_energy
@@ -144,7 +145,7 @@ def mesh_2d(N, factor=2):
     return (two_dim*factor)
 
 
-def fermi(E, T=1):
+def fermi(E, T=0.001):
     return 1/(1+np.exp(E/(kb*T)))
 
 
@@ -153,11 +154,11 @@ def read_gvec(path):
     g_vec = np.zeros(shape=(3, 3))
     count = 0
     for i in lines:
-        if "b_" in i:
+        if "b(" in i:
             if count == 3:
                 continue
             else:
-                g_vec[count] = i.split()[1:]
+                g_vec[count] = i.split()[3:6]
                 count += 1
     g_vec = g_vec.T[:2].T[:2]
     return (g_vec)
