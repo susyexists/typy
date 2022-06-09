@@ -206,7 +206,8 @@ def plot_electron_mesh(band, N, metallic_band_index, xlim, ylim, plot_factor=5, 
         plt.savefig(save)
 
 
-def density_of_states(E, dE=1e-2):
+def density_of_states(energy, band_index, dE=1e-2):
+    E = energy[band_index]
     # Initial empty array for dos
     dos = np.zeros(len(E))
     # Iterate over each energy
