@@ -11,6 +11,7 @@ import multiprocessing
 num_cores = multiprocessing.cpu_count()
 # Physical constants
 kb = physical_constants['Boltzmann constant in eV/K'][0]
+g_vec = np.array([[1, 0.57735], [0, 1.154701]])
 
 
 class typy:
@@ -88,10 +89,11 @@ class typy:
         if save != None:
             plt.savefig(save)
 
-    def t_mesh(self, N):
-        mesh = mesh_2d(N)
-        t_mesh = np.dot(self.g_vec.T, mesh.T)
-        return t_mesh
+
+def t_mesh(N):
+    mesh = mesh_2d(N)
+    t_mesh = np.dot(g_vec.T, mesh.T)
+    return t_mesh
 
 
 def GMKG(num_points, g_length=1):
@@ -186,15 +188,13 @@ def read_efermi(path):
             return e_fermi
 
 
-def plot_electron_mesh(model, N, metallic_band_index, save=None, temp=None):
-    mesh = mesh_2d(N, factor=1.2)
-    band = model.parallel_solver(mesh)[metallic_band_index]
-    t_mesh = model.t_mesh(N)
-    plt.figure(figsize=(6, 5))
-    plt.scatter(t_mesh[0], t_mesh[1], c=band, cmap='jet')
+def plot_electron_mesh(band, N, metallic_band_index, xlim, ylim, plot_factor=5, save=None, temp=None, cmap='jet'):
+    x, y = t_mesh(N)
+    plt.figure(figsize=(plot_factor*xlim+1, plot_factor*ylim))
+    plt.scatter(x, y, c=band[metallic_band_index], cmap=cmap)
     plt.colorbar()
-    plt.xlim(-2.9, 2.9)
-    plt.ylim(-2.6, 2.6)
+    plt.xlim(-xlim, xlim)
+    plt.ylim(-ylim, ylim)
     # plt.axis("equal")
     plt.xticks([])
     plt.yticks([])
@@ -204,3 +204,15 @@ def plot_electron_mesh(model, N, metallic_band_index, save=None, temp=None):
         plt.title(f"σ = {temp}")
     if save != None:
         plt.savefig(save)
+
+
+def density_of_states(E, dE=1e-2):
+    # Initial empty array for dos
+    dos = np.zeros(len(E))
+    # Iterate over each energy
+    for i in range(len(E)):
+        # Delta function approxiation for given value of energy over all states
+        delta_array = np.where(abs(E[i]-E) < dE, np.ones(len(E)), 0)
+        delta_average = np.average(delta_array)
+        dos[i] = delta_average
+    return dos
