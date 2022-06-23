@@ -31,7 +31,7 @@ class typy:
 
     def fourier(self, k):
         kx = np.tensordot(k, self.x, axes=(0, 0))
-        transform = np.dot(self.sym, np.exp(-1j*self.super_cell*kx)
+        transform = np.dot(self.sym, np.exp(-1j*kx*2*np.pi)
                            * self.h).reshape(self.nbnd, self.nbnd)
         return(transform)
 
