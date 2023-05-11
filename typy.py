@@ -11,7 +11,8 @@ import multiprocessing
 num_cores = multiprocessing.cpu_count()
 # Physical constants
 kb = physical_constants['Boltzmann constant in eV/K'][0]
-g_vec = np.array([[1, 0.57735], [0, 1.154701]])
+g_vec = np.array([[0.86602505, 0.5], [0, 1]])
+
 
 
 class typy:
