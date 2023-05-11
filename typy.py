@@ -217,3 +217,33 @@ def density_of_states(energy, band_index, dE=1e-2):
         delta_average = np.average(delta_array)
         dos[i] = delta_average
     return dos
+
+def ram_check():
+    # Getting % usage of virtual_memory ( 3rd field)
+    print('RAM memory % used:', psutil.virtual_memory()[2])
+    # Getting usage of virtual_memory in GB ( 4th field)
+    print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+    
+def rotate(vector,angle):
+    matrix = np.array([[np.cos(angle),-np.sin(angle)],[np.sin(angle),np.cos(angle)]])    
+    transform = np.dot(matrix,vector.T)
+    return(transform)
+
+def hexagon_2d(N):
+    x,y = mesh_2d(N).T
+    df = pd.DataFrame()
+    df['x']=x
+    df['y']=y
+    triangle = df.query("y<=sqrt(3)*x").query("y<=-sqrt(3)*x+sqrt(3)").values
+    fold =6 
+    grid = np.zeros(shape=(fold,len(triangle),2))
+    for n in range(0,fold):
+        theta = n*np.pi/3
+        # rx, ry =rotate(triangle, theta)
+        grid[n]=rotate(triangle, theta).T
+        # print(len(rx))
+        # plt.scatter(rx,ry)
+    grid = grid.reshape(-1,2).T
+    grid = grid/max(grid[1])/2
+    return grid
+    
