@@ -1,5 +1,7 @@
 # Numerical tools
 from scipy.constants import physical_constants
+# Matrix inversion
+from numpy.linalg import inv
 import numpy as np
 # Plotting
 import matplotlib.pyplot as plt
@@ -12,10 +14,9 @@ num_cores = multiprocessing.cpu_count()
 # Physical constants
 kb = physical_constants['Boltzmann constant in eV/K'][0]
 g_vec = np.array([[0.86602505, 0.5], [0, 1]])
+import psutil
 
-
-
-class typy:
+class model:
     def __init__(self, path, nscf, hr, shift=0):
         self.shift = shift
         self.path = path
@@ -32,7 +33,7 @@ class typy:
 
     def fourier(self, k):
         kx = np.tensordot(k, self.x, axes=(0, 0))
-        transform = np.dot(self.sym, np.exp(-1j*kx*2*np.pi)
+        transform = np.dot(self.sym, np.exp(-1j*self.super_cell*kx)
                            * self.h).reshape(self.nbnd, self.nbnd)
         return(transform)
 
@@ -61,7 +62,7 @@ class typy:
 
     def suscep(self, point, mesh, mesh_energy, mesh_fermi, delta=0.0000001):
         shifted_energy = self.parallel_solver(point+mesh)[6]
-        shifted_fermi = self.fermi(shifted_energy)
+        shifted_fermi = fd(shifted_energy)
         num = mesh_fermi-shifted_fermi
         den = mesh_energy-shifted_energy+1j*delta
         res = -np.average(num/den)
@@ -89,7 +90,11 @@ class typy:
         plt.ylabel("Energy (eV)", fontsize=15)
         if save != None:
             plt.savefig(save)
-
+            
+def mesh_2d(N, factor=1):
+    one_dim = np.linspace(0, 1, N)
+    two_dim = np.array([[i, j] for i in one_dim for j in one_dim])
+    return (two_dim*factor)
 
 def t_mesh(N):
     mesh = mesh_2d(N)
@@ -126,11 +131,12 @@ def Symmetries(fstring):
     return x
 
 
-def plot_fs(t_mesh, band, fs_thickness=0.01, title=None):
+def plot_fs(band, fs_thickness=0.01, title=None):
     # Imaging cross sections of fermi surface using a single calculation
     df = pd.DataFrame()
-    df['x'] = t_mesh[0]
-    df['y'] = t_mesh[1]
+    x,y = t_mesh(int(np.sqrt(len(band))))
+    df['x'] = x
+    df['y'] = y
     df['E'] = band
     fs = df.query(f' {-fs_thickness} <= E <= {fs_thickness}')
     fig = plt.figure(figsize=(6, 6))
@@ -142,13 +148,8 @@ def plot_fs(t_mesh, band, fs_thickness=0.01, title=None):
     plt.show()
 
 
-def mesh_2d(N, factor=2):
-    one_dim = np.linspace(-1, 1, N)
-    two_dim = np.array([[i, j] for i in one_dim for j in one_dim])
-    return (two_dim*factor)
-
-
-def fermi(E, T=0.001):
+def fd(E,T=1):
+    E=E.astype(dtype=np.float128)
     return 1/(1+np.exp(E/(kb*T)))
 
 
