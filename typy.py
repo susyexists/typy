@@ -14,6 +14,7 @@ num_cores = multiprocessing.cpu_count()
 # Physical constants
 kb = physical_constants['Boltzmann constant in eV/K'][0]
 g_vec = np.array([[0.86602505, 0.5], [0, 1]])
+inverse_g = np.linalg.inv(g_vec)
 import psutil
 
 class model:
@@ -53,15 +54,18 @@ class model:
         val, vec = np.linalg.eigh(transform)
         return(val)
 
-    def parallel_solver(self, path, shift=0):
+    def calculate_energy(self, path, band_index=False,shift=0):
         path = path+shift
         results = Parallel(n_jobs=num_cores)(
             delayed(self.solver)(i) for i in path)
         res = np.array(results).T-self.fermi_energy
-        return (res)
+        if band_index==False:
+            return (res)
+        else:
+            return (res[band_index])
 
-    def suscep(self, point, mesh, mesh_energy, mesh_fermi, delta=0.0000001):
-        shifted_energy = self.parallel_solver(point+mesh)[6]
+    def suscep(self, point, mesh, mesh_energy, mesh_fermi, delta=0.0001):
+        shifted_energy = self.calculate_energy(point+mesh)
         shifted_fermi = fd(shifted_energy)
         num = mesh_fermi-shifted_fermi
         den = mesh_energy-shifted_energy+1j*delta
@@ -91,13 +95,13 @@ class model:
         if save != None:
             plt.savefig(save)
             
-def mesh_2d(N, factor=1):
+def mesh_cartesian(N, factor=1):
     one_dim = np.linspace(0, 1, N)
     two_dim = np.array([[i, j] for i in one_dim for j in one_dim])
     return (two_dim*factor)
 
-def t_mesh(N):
-    mesh = mesh_2d(N)
+def mesh_crystal(N):
+    mesh = mesh_cartesian(N)
     t_mesh = np.dot(g_vec.T, mesh.T)
     return t_mesh
 
@@ -148,7 +152,7 @@ def plot_fs(band, fs_thickness=0.01, title=None):
     plt.show()
 
 
-def fd(E,T=1):
+def fd(E,T=0.001):
     E=E.astype(dtype=np.float128)
     return 1/(1+np.exp(E/(kb*T)))
 
@@ -231,12 +235,16 @@ def rotate(vector,angle):
     transform = np.dot(matrix,vector.T)
     return(transform)
 
-def hexagon_2d(N):
-    x,y = mesh_2d(N).T
+def triangle_mesh(N):
+    x,y = mesh_cartesian(N).T
     df = pd.DataFrame()
     df['x']=x
     df['y']=y
     triangle = df.query("y<=sqrt(3)*x").query("y<=-sqrt(3)*x+sqrt(3)").values
+    return triangle.T
+
+def hexagon_cartesian(N):
+    triangle = triangle_mesh(N).T
     fold =6 
     grid = np.zeros(shape=(fold,len(triangle),2))
     for n in range(0,fold):
@@ -249,3 +257,10 @@ def hexagon_2d(N):
     grid = grid/max(grid[1])/2
     return grid
     
+def hexagon_crystal(N,g_vec=g_vec):
+    grid = np.dot(hexagon_cartesian(N).T,inverse_g)
+    return grid
+
+def cartesian2crystal(cartesian):
+    grid = np.dot(g_vec,cartesian)
+    return grid

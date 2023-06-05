@@ -1,0 +1,195 @@
+
+     Program PWSCF v.7.0 starts on 22Oct2022 at 17: 9:14 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on    64 processors
+
+     MPI processes distributed on     1 nodes
+     195542 MiB available memory on the printing compute node when the environment starts
+ 
+     Reading input from nscf.in
+Warning: card &IONS ignored
+Warning: card / ignored
+Warning: card &CELL ignored
+Warning: card / ignored
+
+     Current dimensions of program PWSCF are:
+     Max number of different atomic species (ntypx) = 10
+     Max number of k-points (npk) =  40000
+     Max angular momentum in pseudopotentials (lmaxx) =  4
+
+     Atomic positions and unit cell read from directory:
+     ./outdir/NbSe2.save/
+     Atomic positions from file used, from input discarded
+ 
+     file Nb.pbe-spn-rrkjus_psl.1.0.0.UPF: wavefunction(s)  4S 4P renormalized
+     file Se.pbe-mt_fhi.UPF: wavefunction(s)  4f renormalized
+ 
+     R & G space division:  proc/nbgrp/npool/nimage =      64
+     Subspace diagonalization in iterative solution of the eigenvalue problem:
+     a serial algorithm will be used
+
+ 
+     Parallelization info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          37      37     11                 5835     5835    1037
+     Max          39      39     12                 5850     5850    1068
+     Sum        2395    2395    757               373873   373873   67681
+ 
+     Using Slab Decomposition
+ 
+
+
+     bravais-lattice index     =            0
+     lattice parameter (alat)  =       6.5757  a.u.
+     unit-cell volume          =     977.9629 (a.u.)^3
+     number of atoms/cell      =            3
+     number of atomic types    =            2
+     number of electrons       =        25.00
+     number of Kohn-Sham states=           17
+     kinetic-energy cutoff     =     200.0000  Ry
+     charge density cutoff     =     800.0000  Ry
+     Exchange-correlation= PBE
+                           (   1   4   3   4   0   0   0)
+
+     celldm(1)=   6.575723  celldm(2)=   0.000000  celldm(3)=   0.000000
+     celldm(4)=   0.000000  celldm(5)=   0.000000  celldm(6)=   0.000000
+
+     crystal axes: (cart. coord. in units of alat)
+               a(1) = (   1.000000   0.000000   0.000000 )  
+               a(2) = (  -0.500000   0.866025   0.000000 )  
+               a(3) = (   0.000000   0.000000   3.971560 )  
+
+     reciprocal axes: (cart. coord. in units 2 pi/alat)
+               b(1) = (  1.000000  0.577350  0.000000 )  
+               b(2) = (  0.000000  1.154701  0.000000 )  
+               b(3) = (  0.000000  0.000000  0.251790 )  
+
+
+     PseudoPot. # 1 for Nb read from file:
+     ../pseudos/Nb.pbe-spn-rrkjus_psl.1.0.0.UPF
+     MD5 check sum: 6ee677a9f002bd3e3657f443f129faad
+     Pseudo is Ultrasoft + core correction, Zval = 13.0
+     Generated using &quot;atomic&quot; code by A. Dal Corso  v.6.2.2
+     Using radial grid of 1227 points,  6 beta functions with: 
+                l(1) =   0
+                l(2) =   0
+                l(3) =   1
+                l(4) =   1
+                l(5) =   2
+                l(6) =   2
+     Q(r) pseudized with 0 coefficients 
+
+
+     PseudoPot. # 2 for Se read from file:
+     ../pseudos/Se.pbe-mt_fhi.UPF
+     MD5 check sum: 761aa2365a2a775fd78ad90d13f3567a
+     Pseudo is Norm-conserving, Zval =  6.0
+     Generated using FHI98PP, converted with fhi2upf.x v.5.0.2
+     Using radial grid of  533 points,  3 beta functions with: 
+                l(1) =   0
+                l(2) =   1
+                l(3) =   3
+
+     atomic species   valence    mass     pseudopotential
+        Nb            13.00    92.90000     Nb( 1.00)
+        Se             6.00    78.96000     Se( 1.00)
+
+     No symmetry found
+
+
+
+   Cartesian axes
+
+     site n.     atom                  positions (alat units)
+         1           Nb  tau(   1) = (   0.0000000   0.0000000   1.9857800  )
+         2           Se  tau(   2) = (  -0.0000000   0.5773503   1.5029416  )
+         3           Se  tau(   3) = (  -0.0000000   0.5773503   2.4686184  )
+
+     number of k points=  1296  Fermi-Dirac smearing, width (Ry)=  0.0056
+
+     Number of k-points >= 100: set verbosity='high' to print them.
+
+     Dense  grid:   373873 G-vectors     FFT dimensions: (  60,  60, 240)
+
+     Estimated max dynamical RAM per process >      26.69 MB
+
+     Estimated total dynamical RAM >       1.67 GB
+
+     The potential is recalculated from file :
+     ./outdir/NbSe2.save/charge-density
+
+
+     negative rho (up, down):  1.231E-06 0.000E+00
+     Starting wfcs are   45 randomized atomic wfcs
+
+     Band Structure Calculation
+     Davidson diagonalization with overlap
+
+     ethr =  1.00E-13,  avg # of iterations = 53.2
+
+     total cpu time spent up to now is      675.5 secs
+
+     End of band structure calculation
+
+     Number of k-points >= 100: set verbosity='high' to print the bands.
+
+     the Fermi energy is     1.1260 ev
+     (compare with:     1.1260 eV, computed in scf)
+
+     Writing all to output data dir ./outdir/NbSe2.save/
+ 
+     init_run     :      0.29s CPU      0.46s WALL (       1 calls)
+     electrons    :    660.66s CPU    674.19s WALL (       1 calls)
+
+     Called by init_run:
+     wfcinit      :      0.00s CPU      0.10s WALL (       1 calls)
+     potinit      :      0.03s CPU      0.05s WALL (       1 calls)
+     hinit0       :      0.11s CPU      0.15s WALL (       1 calls)
+
+     Called by electrons:
+     c_bands      :    660.65s CPU    674.18s WALL (       1 calls)
+     v_of_rho     :      0.01s CPU      0.01s WALL (       1 calls)
+     newd         :      0.02s CPU      0.02s WALL (       1 calls)
+
+     Called by c_bands:
+     init_us_2    :      0.23s CPU      0.28s WALL (    1296 calls)
+     init_us_2:cp :      0.22s CPU      0.28s WALL (    1296 calls)
+     cegterg      :    612.76s CPU    624.20s WALL (    3897 calls)
+
+     Called by *egterg:
+     cdiaghg      :     27.46s CPU     28.74s WALL (   70204 calls)
+     h_psi        :    523.77s CPU    531.08s WALL (   74101 calls)
+     s_psi        :     11.05s CPU     11.65s WALL (   74101 calls)
+     g_psi        :      2.05s CPU      2.07s WALL (   68908 calls)
+
+     Called by h_psi:
+     h_psi:calbec :     24.26s CPU     25.70s WALL (   74101 calls)
+     vloc_psi     :    485.60s CPU    490.82s WALL (   74101 calls)
+     add_vuspsi   :     12.31s CPU     13.00s WALL (   74101 calls)
+
+     General routines
+     calbec       :     24.10s CPU     25.60s WALL (   74101 calls)
+     fft          :      0.01s CPU      0.01s WALL (      12 calls)
+     fftw         :    465.10s CPU    470.12s WALL ( 2029614 calls)
+     davcio       :      0.29s CPU      1.27s WALL (    2592 calls)
+ 
+     Parallel routines
+ 
+     PWSCF        :  11m19.12s CPU  12m37.26s WALL
+
+ 
+   This run was terminated on:  17:21:51  22Oct2022            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=
