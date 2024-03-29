@@ -17,6 +17,7 @@ g_vec = np.array([[0.86602505, 0.5], [0, 1]])
 inverse_g = np.linalg.inv(g_vec)
 import psutil
 
+
 class model:
     def __init__(self, path, nscf, hr, shift=0):
         self.shift = shift
@@ -152,7 +153,7 @@ def plot_fs(band, fs_thickness=0.01, title=None):
     plt.show()
 
 
-def fd(E,T=0.001):
+def fd(E,T=10):
     E=E.astype(dtype=np.float128)
     return 1/(1+np.exp(E/(kb*T)))
 
@@ -212,8 +213,11 @@ def plot_electron_mesh(band, N, metallic_band_index, xlim, ylim, plot_factor=5, 
         plt.savefig(save)
 
 
-def density_of_states(energy, band_index, dE=1e-2):
-    E = energy[band_index]
+def density_of_states(energy, band_index=False, dE=1e-2):
+    if band_index:
+        E = energy[band_index]
+    else:
+        E=energy
     # Initial empty array for dos
     dos = np.zeros(len(E))
     # Iterate over each energy
@@ -264,3 +268,170 @@ def hexagon_crystal(N,g_vec=g_vec):
 def cartesian2crystal(cartesian):
     grid = np.dot(g_vec,cartesian)
     return grid
+
+def untangle(band,cross):
+    fix = band.copy()
+    num_cross = len(cross)
+    for i in range(num_cross):
+        temp_1 = fix[cross[i][0]].copy()
+        temp_2 = fix[cross[i][1]].copy()
+        point = cross[i][2]
+        fix[cross[i][1]][:point] = temp_1[:point]
+        fix[cross[i][0]][:point] = temp_2[:point]
+    return fix
+
+def ph_cross(ph,tolerance,offset=50):
+    ph_xs=[]
+    pointer = 0
+    for q in range(offset,ph.shape[1]-offset):
+        for i in range(ph.shape[0]):
+            for j in range(ph.shape[0]):
+                if i<j:
+                    if abs(ph[i][q]-ph[j][q])<tolerance:
+                        if(q!= pointer+1):
+                            # print(i,j,q)
+                            ph_xs.append([i,j,q])
+                        pointer = q          
+    return ph_xs
+    
+def g_cross(g,tolerance,offset=50):
+    g_xs=[]
+    pointer = 0
+    for q in range(offset,g.shape[1]-offset):
+        for i in range(g.shape[0]):
+            for j in range(g.shape[0]):
+                if i<j:
+                    if abs(g[i][q]-g[i][q-1])>tolerance:
+                        if abs(g[j][q]-g[j][q-1])>tolerance:
+                                # print(i,j,q)
+                                g_xs.append([i,j,q])
+    return g_xs
+    
+def path_create(n_points,corners):
+    distance = np.zeros(shape=(len(corners)))
+    for i in range(len(corners)):
+        if i==0:
+            distance[i]=0
+        else:
+            distance[i]= np.linalg.norm(corners[i-1]-corners[i])
+    point_ratio = distance/np.sum(distance)
+    total_points = (n_points*point_ratio).round(0).astype(int)
+    total_number = np.sum(total_points).astype(int)
+    corner_points = np.zeros(len(corners),dtype=int)
+    temp=0
+    for i in range(len(corners)):
+        temp+=total_points[i]
+        corner_points[i]=temp
+    # print(corner_points)
+    counter=0
+
+    counter=0
+    path=np.zeros(shape=(n_points+1,3))
+    for i in range(1,len(corners)):
+        temp = corners[i-1].copy()
+        # print(i,counter,temp)
+        # path.append(temp)
+        path[counter]=temp
+        counter+=1
+        for j in range(total_points[i]-1):
+            temp+=(corners[i]-corners[i-1])/total_points[i]
+            # print(i,counter,temp)    
+            # path.append(temp)
+            path[counter]=temp
+            counter+=1
+        if i==len(corners)-1:
+            temp+=(corners[i]-corners[i-1])/total_points[i]
+            # print(i,counter,temp)
+            # path.append(temp)
+            path[counter]=temp
+            counter+=1
+    return(corner_points,path)
+
+
+def find_cross(band,parameter):
+    xs=[]
+    point_pair=[]
+    for i in range(len(band)):
+        grad = np.gradient(band[i])
+        for j in range(1,len(band[i])):
+            if abs(grad[j]-grad[j-1])>parameter:
+                # print(i,j)
+                point_pair.append([i,j])
+    # print(point_pair)
+    for i in point_pair:
+        point=i[1]
+        begin=i[0]
+        for j in point_pair:
+            if i[0]!=j[0]:
+                if i[1]==j[1]:
+                    end=j[0]
+                    xs.append([begin,end,point])
+    xs_sort = xs[xs[:, 2].argsort()]    
+    return np.array(xs_sort)
+
+class epw:
+    def __init__(self,work_dir,outfolder,nk,nq,nph,ef):
+        #Initialize data array
+        self.ph = np.zeros(shape=(nph,nq))
+        self.g_abs = np.zeros(shape=(nph,nq,nk))
+        self.g_complex = np.zeros(shape=(nph,nq,nk))
+        self.g_re = np.zeros(shape=(nph,nq,nk))
+        self.g_im = np.zeros(shape=(nph,nq,nk))
+        self.e_k = np.zeros(shape=(nq,nk))
+        self.e_kq = np.zeros(shape=(nq,nk))
+        self.nk = nk
+        self.nq = nq
+        self.nph = nph
+        self.ef=ef
+        self.work_dir = work_dir
+        self.outfolder=outfolder
+    def load_data(self):        
+        ph_df = pd.DataFrame()
+        g_abs_df = pd.DataFrame()
+        g_re_df = pd.DataFrame()
+        g_im_df = pd.DataFrame()
+        e_k_df = pd.DataFrame()
+        e_kq_df = pd.DataFrame()
+        for i in range(self.nph):
+            ph_df[i]    = pd.read_csv(f"{self.work_dir}/{self.outfolder}/omega/omega_{i+1}.dat", delimiter=' ',header=None)
+            g_abs_df[i] = pd.read_csv(f"{self.work_dir}/{self.outfolder}/gkk_abs/gkk_{i+1}.dat", delimiter=' ',header=None)
+            g_re_df[i]  = pd.read_csv(f"{self.work_dir}/{self.outfolder}/gkk_re/gkk_{i+1}.dat", delimiter=' ',header=None)
+            g_im_df[i]  = pd.read_csv(f"{self.work_dir}/{self.outfolder}/gkk_im/gkk_{i+1}.dat", delimiter=' ',header=None)
+        e_k_df  = pd.read_csv(f"{self.work_dir}/{self.outfolder}/enk/enk_{1}.dat", delimiter=' ',header=None)
+        e_kq_df = pd.read_csv(f"{self.work_dir}/{self.outfolder}/enkq/enkq_{1}.dat", delimiter=' ',header=None)
+        for i in range(self.nph):
+            self.ph[i] = ph_df[i].values.reshape(self.nq,self.nk).T[0]
+            self.g_abs[i] = g_abs_df[i].values.reshape(self.nq,self.nk)
+            self.g_re[i] = g_re_df[i].values.reshape(self.nq,self.nk)
+            self.g_im[i] = g_im_df[i].values.reshape(self.nq,self.nk)
+        self.e_k = e_k_df.values.reshape(self.nq,self.nk)
+        self.e_kq = e_kq_df.values.reshape(self.nq,self.nk)
+        self.g_complex = self.g_re+1j*self.g_im
+        #remove data frames to clean memmory
+        del ph_df
+        del g_abs_df
+        del g_re_df
+        del g_im_df
+        del e_k_df
+        del e_kq_df
+
+    def calculate_self_energy(self,q):
+        res = np.zeros(self.nph,dtype=complex)
+        for n in range(self.nph):
+            temp_res = 0
+            for k in range(self.nk):
+                temp_res += self.calculate_eph(n,q,k)*self.calculate_suscep(n,q,k)
+            res[n]=temp_res/self.nk
+        return res
+        
+    def calculate_eph(self,n,q,k):
+        eph = self.g0[n][q][k]*self.g0[n][q][k].conj()*10**-6
+        return eph
+        
+    def calculate_suscep(self,n,q,k,delta=0.0000001):
+        top = fd(self.e_k[q][k]-self.ef)-fd(self.e_kq[q][k]-self.ef)
+        bottom = self.e_k[q][k]-self.e_kq[q][k]-1j*delta-self.ph[n][q]*10**-3
+        return top/bottom
+
+
+
