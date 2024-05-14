@@ -120,3 +120,28 @@ def fermi_bands(bands, window=0.5):
             if -0.5 <= e and e <= 0.5:
                 near_bands.append(j)
     return set(near_bands)
+
+def write_susceptibility(path,sym,suscep,out_file='./susceptibility.dat'):
+    data_label=['iq','qx','qy','qz','Re','Im']
+    data_array = np.vstack((np.arange(len(path)).astype(int),path.T, suscep)).T
+    sym = sym
+    out_file = out_file
+    with open(out_file, "w") as file:
+        # Writing data to a file
+        file.write(f"#High-Symmetry Points {' '.join(sym.astype(str))} \n")
+    with open(out_file, "a") as file:
+        # Writing data to a file
+        for j,i in enumerate(data_label):
+            if j==0:
+                file.write(f"#{i:<7}")    
+            else:
+                file.write(f"{i:<15}")
+        file.write("\n")
+    with open(out_file, "a") as file:
+            for i in data_array:
+                for k,j in enumerate(i):
+                    if k==0:
+                        file.write(f"{int(j):<8}")
+                    else:
+                        file.write(f"{np.around(j,8):<14} ")
+                file.write("\n")
