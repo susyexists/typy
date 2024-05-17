@@ -16,6 +16,7 @@ g_vec = np.array([[0.86602505, 0.5], [0, 1]])
 inverse_g = np.linalg.inv(g_vec)
 import psutil
 from . import utils
+from tqdm import tqdm
 
 class model:
     def __init__(self, hr, path="./",nscf=False,poscar=False, ef=0,read_ef=False,shift=0,num_core=False):
@@ -76,24 +77,22 @@ class model:
             return (res[band_index])
 
     def suscep(self, point, mesh, mesh_energy, mesh_fermi, bands,T=1,delta=0.0000001,fermi_shift =0 ):
-        num = 0
-        den = 0 
         real= 0
         imag = 0
+        shifted_energy = self.calculate_energy(point+mesh)
+        shifted_fermi = fd(shifted_energy,T)
         for i in bands:
             for j in bands:
-                shifted_energy = self.calculate_energy(point+mesh)-fermi_shift
-                shifted_fermi = fd(shifted_energy,T)-fermi_shift
-                num += mesh_fermi[i]-shifted_fermi[j]
-                den += mesh_energy[i]-shifted_energy[j]+1j*delta
-                real += -np.average(num/den).real
+                num = mesh_fermi[i]-shifted_fermi[j]
+                den = mesh_energy[i]-shifted_energy[j]+1j*delta
+                real += np.average(num/den)
                 imag += np.average(delta_function(mesh_energy[i])*delta_function(shifted_energy[j]))
-        return([real,imag])
+        return([-real.real,imag])
     
     def suscep_path(self,q_path,k_mesh,band_index,T=1):
         en_k = self.calculate_energy(k_mesh)
         fd_k = fd(en_k,T)
-        res = [self.suscep(point=q,mesh= k_mesh,mesh_energy=en_k,mesh_fermi = fd_k,bands=band_index) for q in q_path]
+        res = [self.suscep(point=q,mesh= k_mesh,mesh_energy=en_k,mesh_fermi = fd_k,bands=band_index) for q in tqdm(q_path)]
         return np.array(res).T
 
     def plot_electron_path(self, band, sym, labels, ylim=None, save=None, temp=None):
