@@ -10,7 +10,6 @@ import pandas as pd
 # Parallel computation
 from joblib import Parallel, delayed
 import multiprocessing
-num_cores = multiprocessing.cpu_count()
 # Physical constants
 kb = physical_constants['Boltzmann constant in eV/K'][0]
 g_vec = np.array([[0.86602505, 0.5], [0, 1]])
@@ -19,13 +18,26 @@ import psutil
 plt.style.use('./src/neon.mplstyle')
 
 from .epw import epw
+from . import utils
+from tqdm import tqdm
 
 class model:
-    def __init__(self, path, nscf, hr, shift=0):
+    def __init__(self, hr, path="./",nscf=False,poscar=False, ef=0,read_ef=False,shift=0,num_core=False):
+        if num_core!=False:
+            self.num_cores= num_core
+        else:
+            self.num_cores = multiprocessing.cpu_count()
         self.shift = shift
         self.path = path
-        self.fermi_energy = read_efermi(path+nscf)+self.shift
-        self.g_vec = read_gvec(path+nscf)
+        if read_ef:
+            self.fermi_energy = read_efermi(path+nscf)+self.shift
+        else:
+            self.fermi_energy=ef
+        if nscf:
+            self.g_vec = read_gvec(path+nscf)
+        if poscar:
+            lattice_vector = utils.read_poscar(path+poscar)
+            self.g_vec = utils.crystal2reciprocal(lattice_vector)
         self.g_length = 1
         self.data = read_hr(path+hr)
         self.hopping = self.data[0]
@@ -33,7 +45,7 @@ class model:
         self.points = len(self.data[2])
         self.sym = self.data[2]
         self.h = self.hopping.reshape(self.points, self.nbnd*self.nbnd)
-        self.x = self.data[1].reshape(2, self.points, self.nbnd*self.nbnd)
+        self.x = self.data[1].reshape(3, self.points, self.nbnd*self.nbnd)
 
     def fourier(self, k):
         kx = np.tensordot(k, self.x, axes=(0, 0))
@@ -57,9 +69,9 @@ class model:
         val, vec = np.linalg.eigh(transform)
         return(val)
 
-    def calculate_energy(self, path, band_index=False,shift=0):
-        path = path+shift
-        results = Parallel(n_jobs=num_cores)(
+    def calculate_energy(self, path, band_index=False):
+        path = path
+        results = Parallel(n_jobs=self.num_cores)(
             delayed(self.solver)(i) for i in path)
         res = np.array(results).T-self.fermi_energy
         if band_index==False:
@@ -67,23 +79,34 @@ class model:
         else:
             return (res[band_index])
 
-    def suscep(self, point, mesh, mesh_energy, mesh_fermi, delta=0.0001):
+    def suscep(self, point, mesh, mesh_energy, mesh_fermi, bands,T=1,delta=0.0000001,fermi_shift =0 ):
+        real= 0
+        imag = 0
         shifted_energy = self.calculate_energy(point+mesh)
-        shifted_fermi = fd(shifted_energy)
-        num = mesh_fermi-shifted_fermi
-        den = mesh_energy-shifted_energy+1j*delta
-        res = -np.average(num/den)
-        return(res)
+        shifted_fermi = fd(shifted_energy,T)
+        for i in bands:
+            for j in bands:
+                num = mesh_fermi[i]-shifted_fermi[j]
+                den = mesh_energy[i]-shifted_energy[j]+1j*delta
+                real += np.average(num/den)
+                imag += np.average(delta_function(mesh_energy[i])*delta_function(shifted_energy[j]))
+        return([-real.real,imag])
+    
+    def suscep_path(self,q_path,k_mesh,band_index,T=1):
+        en_k = self.calculate_energy(k_mesh)
+        fd_k = fd(en_k,T)
+        res = [self.suscep(point=q,mesh= k_mesh,mesh_energy=en_k,mesh_fermi = fd_k,bands=band_index) for q in tqdm(q_path)]
+        return np.array(res).T
 
-    def plot_electron_path(self, band, sym, label, ylim=None, save=None, temp=None):
+    def plot_electron_path(self, band, sym, labels, ylim=None, save=None, temp=None):
         # Plot band
         plt.figure(figsize=(7, 6))
         for i in band:
             plt.plot(i, c="blue")
-        plt.xticks(ticks=sym, labels=label, fontsize=15)
-        plt.xlim(sym[0], len(band.T))
-        plt.axvline(sym[1], c="black", linestyle="--")
-        plt.axvline(sym[2], c="black", linestyle="--")
+        plt.xticks(ticks=sym, labels=labels, fontsize=15)
+        plt.xlim(sym[0], sym[-1])
+        for i in sym[1:-1]:
+            plt.axvline(i, c="black", linestyle="--")
         plt.axhline(0, linestyle="--", color="red")
         if ylim == None:
             plt.ylim(-0.6, 0.8)
@@ -97,11 +120,14 @@ class model:
         plt.ylabel("Energy (eV)", fontsize=15)
         if save != None:
             plt.savefig(save)
+
             
-def mesh_cartesian(N, factor=1):
-    one_dim = np.linspace(0, 1, N)
-    two_dim = np.array([[i, j] for i in one_dim for j in one_dim])
-    return (two_dim*factor)
+def mesh_cartesian(num_points=[6,6,6], factor=1):
+    x = np.linspace(0, 1, num_points[0])
+    y = np.linspace(0, 1, num_points[1])
+    z = np.linspace(0, 1, num_points[2])
+    three_dim = np.array([[i, j,k] for i in x for j in y for k in z])
+    return (three_dim*factor)
 
 def mesh_crystal(N):
     mesh = mesh_cartesian(N)
@@ -155,9 +181,12 @@ def plot_fs(band, fs_thickness=0.01, title=None):
     plt.show()
 
 
-def fd(E,T=10):
+def fd(E,T=1):
     E=E.astype(dtype=np.float128)
     return 1/(1+np.exp(E/(kb*T)))
+
+def delta_function(x, epsilon=0.00001):
+    return (1 / np.pi) * epsilon / (x ** 2 + epsilon ** 2)
 
 
 def read_gvec(path):
@@ -183,7 +212,7 @@ def read_hr(path):
     hr_temp = np.array([float(lines[i].split()[j]) for i in range(
         sym_line, len(lines)) for j in range(len(lines[i].split()))])
     hr = hr_temp.reshape(-1, 7).T
-    x = hr[0:2]
+    x = hr[0:3]
     hopping = hr[5]+1j*hr[6]
     return (hopping, x, sym)
 
@@ -195,7 +224,6 @@ def read_efermi(path):
         if "the Fermi energy is" in i:
             e_fermi = float(i.split()[-2])
             return e_fermi
-
 
 def plot_electron_mesh(band, N, metallic_band_index, xlim, ylim, plot_factor=5, save=None, temp=None, cmap='jet'):
     x, y = t_mesh(N)
@@ -270,7 +298,6 @@ def hexagon_crystal(N,g_vec=g_vec):
 def cartesian2crystal(cartesian):
     grid = np.dot(g_vec,cartesian)
     return grid
-
 
 
 def find_cross(band,parameter):
