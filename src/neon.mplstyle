@@ -1,0 +1,2 @@
+axes.prop_cycle: cycler('color',['FF0000','0057FF','FAFF00','111111','00FF0A','FF007A','FF7A00','551C1C','9000D3'])
+lines.linewidth:31
