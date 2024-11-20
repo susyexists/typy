@@ -5,7 +5,7 @@ import pandas as pd
 import copy
 
 class epw:
-    def __init__(self,path=False,work_dir=False,outfolder=False,nk=False,nq=False,nph=False,ef=False):
+    def __init__(self,path=False,work_dir=False,outfolder=False,nk=False,nq=False,nph=False,ef=False,job_id=False):
         #Initialize data array
         if path!=False:
             self.path= path
@@ -22,6 +22,7 @@ class epw:
         self.work_dir = work_dir
         self.outfolder = outfolder
         self.q_path = np.arange(self.nq)
+        self.job_id = job_id
 
     def load_data(self):        
         self.init_array() #Initialize numpy arrays for data
@@ -105,3 +106,15 @@ class epw:
             for j in range(self.nq):
                 reduced_fixed_g_complex[i][j]*=np.sqrt(self.ph[i][j])
         self.g0 = reduced_fixed_g_complex
+
+    def swap_branch(self,index1,index2,qpoint=False):
+        if qpoint==False:
+            self.ph[[index1,index2]]        = self.ph[[index2,index1]]        
+            self.g_complex[[index1,index2]] = self.g_complex[[index2,index1]]        
+            self.g_sq_mean[[index1,index2]] = self.g_sq_mean[[index2,index1]]        
+            self.g0[[index1,index2]]        = self.g0[[index2,index1]]
+        else:
+            self.ph = utils.untangle(self.ph,[[index1,index2,qpoint]])
+            self.g_complex = utils.untangle(self.g_complex,[[index1,index2,qpoint]])
+            self.g_sq_mean = utils.untangle(self.g_sq_mean,[[index1,index2,qpoint]])
+            self.g0 = utils.untangle(self.g0,[[index1,index2,qpoint]])

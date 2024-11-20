@@ -11,11 +11,13 @@ import pandas as pd
 from joblib import Parallel, delayed
 import multiprocessing
 # Physical constants
-kb = physical_constants['Boltzmann constant in eV/K'][0]
 g_vec = np.array([[0.86602505, 0.5], [0, 1]])
 inverse_g = np.linalg.inv(g_vec)
 import psutil
 plt.style.use('./src/neon.mplstyle')
+
+from .functions import fd
+
 
 from .epw import epw
 from . import utils
@@ -122,15 +124,22 @@ class model:
             plt.savefig(save)
 
             
-def mesh_cartesian(num_points=[6,6,6], factor=1):
-    x = np.linspace(0, 1, num_points[0])
-    y = np.linspace(0, 1, num_points[1])
-    z = np.linspace(0, 1, num_points[2])
-    three_dim = np.array([[i, j,k] for i in x for j in y for k in z])
-    return (three_dim*factor)
+def mesh_cartesian(N,dimension, factor=1):
+    if type(N)== int:
+        N = [N,N,N]
+    if dimension == 3:
+        x = np.linspace(0, 1, N[0])
+        y = np.linspace(0, 1, N[1])
+        z = np.linspace(0, 1, N[2])
+        mesh = np.array([[i, j,k] for i in x for j in y for k in z])
+    elif dimension == 2:
+        x = np.linspace(0, 1, N[0])
+        y = np.linspace(0, 1, N[1])
+        mesh = np.array([[i, j] for i in x for j in y])
+    return (mesh*factor)
 
-def mesh_crystal(N):
-    mesh = mesh_cartesian(N)
+def mesh_crystal(N,dimension = 3,factor=1):
+    mesh = mesh_cartesian(N, dimension,factor)
     t_mesh = np.dot(g_vec.T, mesh.T)
     return t_mesh
 
@@ -181,9 +190,7 @@ def plot_fs(band, fs_thickness=0.01, title=None):
     plt.show()
 
 
-def fd(E,T=1):
-    E=E.astype(dtype=np.float128)
-    return 1/(1+np.exp(E/(kb*T)))
+
 
 def delta_function(x, epsilon=0.00001):
     return (1 / np.pi) * epsilon / (x ** 2 + epsilon ** 2)
